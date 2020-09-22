@@ -59,7 +59,8 @@ public:
          m_data[s.len()] = 0;
          m_len = s.len();
          return *this;
-     }    
+     } 
+   
     ~String() {
         delete[] m_data;
     }
