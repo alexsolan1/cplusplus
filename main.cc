@@ -23,23 +23,23 @@ public:
         alloc_and_copy(data, length);
     }
     
+    String(unsigned capacity) {
+        m_data = new char[capacity];
+        m_capacity = capacity;
+        m_length = 1;
+    }
     
     String(String&& s) :
-        m_data(s.data()),
+        m_data(s.m_data),
         m_capacity(s.capacity()),
         m_length(s.length()) 
     { 
         s.clean();
     }
          
-    String& operator=(const String& s) {
-         // for x = x, ignoring more complicated cases where len/capacity differ
-         if (m_data == s.data()) {
-             return *this;
-         }
-         delete[] m_data;
-         alloc_and_copy(s.data(), s.length());
-         return *this;
+    String& operator=(String s) {
+        swap(*this, s);
+        return *this;
     }
     
     String& operator=(String&& s) {
@@ -47,7 +47,7 @@ public:
         if (m_data == s.data()) {
             return *this;
         }
-        m_data = s.data();
+        m_data = s.m_data;
         m_capacity = s.capacity();
         m_length = s.length();
         s.clean();
@@ -70,7 +70,7 @@ public:
         return m_capacity;
     }
 
-    char* data() const {
+    const char* data() const {
         return m_data;
     }
     
@@ -84,11 +84,17 @@ public:
     }
     
     String& operator+=(const String& s) {
-        unsigned oldlen = length();
-        m_length = length() + s.length();
-        if (m_length + 1 >= m_capacity) {
-            reallocate(m_length + 1);
+        unsigned newlen = length() + s.length();
+        if (newlen + 1 >= m_capacity) {
+            String tmp(newlen);
+            tmp.add(m_data, 0);
+            tmp.add(s.m_data, length());
+            swap(*this, tmp);
+            return *this;
         }
+        // no need for new allocation, capacity doesn't change
+        unsigned oldlen = length();
+        m_length = newlen;
         add(s, oldlen);
         return *this;
     }
@@ -102,30 +108,26 @@ public:
     }
    
 private:
+    friend void swap(String& first, String& second) {
+        swap(first.m_capacity, second.m_capacity);
+        swap(first.m_length, second.m_length);
+        swap(first.m_data, second.m_data);
+    }
     
     void alloc_and_copy(const char* data, size_t length) {
+        char* tmp = new char[length + 1];  
         m_capacity = length + 1;
         m_length = length;
-        m_data = new char[m_capacity];
+        m_data = tmp;
         strncpy(m_data, data, length);
         m_data[m_length] = 0;
     }
     
     void reallocate(unsigned length) {
-        unsigned m_capacity = length;
-        char* tmp;
-        try {
-            tmp = new char[m_capacity];
-        }
-        catch (const std::bad_alloc& e) {
-            cerr << "Caught bad_alloc " << e.what() << endl;
-            throw(e);
-        }
-                
-        strcpy(tmp, m_data);
-        tmp[m_length] = 0;
-        delete[] m_data;
-        m_data = tmp;
+        String tmp(length);
+        tmp.m_length = m_length;
+        tmp.add(*this, 0);
+        swap(*this, tmp);
     }
     
     void add(const String& s, unsigned location) {
@@ -202,8 +204,7 @@ int main()
     String s5(create_string());
     cout << "s5(move ctor) " << s5 << endl;
     
-    char* data = s5.data();
-    data[0] = 'B';
-    assert('B' == s5[0]);
+    const char* data = s5.data();
+    // data[0] = 'B'; // Does not compile
     return 0;
 }
