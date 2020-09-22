@@ -2,6 +2,7 @@
 #include <string.h>
 #include <cassert>
 
+
 using namespace std;
 constexpr unsigned INITIAL_CAPACITY = 16;
 
