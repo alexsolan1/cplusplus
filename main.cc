@@ -1,5 +1,5 @@
 #include <iostream>
-#include <string.h>
+#include <cstring>
 #include <cassert>
 
 using namespace std;
@@ -23,11 +23,11 @@ public:
         alloc_and_copy(data, length);
     }
     
-    String(unsigned capacity) {
-        m_data = new char[capacity];
-        m_capacity = capacity;
-        m_length = 1;
-    }
+    String(unsigned capacity) :
+        m_data(new char[capacity]),
+        m_capacity(capacity),
+        m_length(0)
+    { }
     
     String(String&& s) :
         m_data(s.m_data),
@@ -58,7 +58,7 @@ public:
     }
     
     void reserve(unsigned capacity) {
-        if (capacity < m_capacity) { return; }
+        if (capacity <= m_capacity) { return; }
         reallocate(capacity);
     }
     
@@ -85,17 +85,17 @@ public:
     
     String& operator+=(const String& s) {
         unsigned newlen = length() + s.length();
-        if (newlen + 1 >= m_capacity) {
-            String tmp(newlen);
-            tmp.add(m_data, 0);
-            tmp.add(s.m_data, length());
+        if (newlen + 1 > m_capacity) {
+            String tmp(newlen+1);
+            tmp.unsafe_add(m_data, 0);
+            tmp.unsafe_add(s.m_data, length());
             swap(*this, tmp);
             return *this;
         }
         // no need for new allocation, capacity doesn't change
         unsigned oldlen = length();
         m_length = newlen;
-        add(s, oldlen);
+        unsafe_add(s, oldlen);
         return *this;
     }
     
@@ -109,6 +109,7 @@ public:
    
 private:
     friend void swap(String& first, String& second) {
+        using std::swap;
         swap(first.m_capacity, second.m_capacity);
         swap(first.m_length, second.m_length);
         swap(first.m_data, second.m_data);
@@ -123,16 +124,18 @@ private:
         m_data[m_length] = 0;
     }
     
-    void reallocate(unsigned length) {
-        String tmp(length);
+    void reallocate(unsigned capacity) {
+        String tmp(capacity);
         tmp.m_length = m_length;
-        tmp.add(*this, 0);
+        tmp.unsafe_add(*this, 0);
         swap(*this, tmp);
     }
     
-    void add(const String& s, unsigned location) {
+    void unsafe_add(const String& s, unsigned location) {
+        assert(location + s.length() + 1 <= m_capacity); 
         strcpy(m_data + location, s.data());
         m_data[location + s.length()] = 0;
+        m_length = location + s.length();
     }
     
     void clean() {
@@ -183,7 +186,7 @@ int main()
     String small("xxxx");
     String small2("yyyy");
     small2 += small;
-    cout << "Small2 = " << small2 << " capacity: " << small2.capacity() << endl;
+    cout << "Small2 = " << small2 << " capacity: " << small2.capacity() << " len " << small2.length() << endl;
     
     String my_copy = small2;
     cout << "my_copy = " << my_copy << endl;
