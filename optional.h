@@ -20,9 +20,7 @@ public:
 	Optional(const T& t) :
 		m_value(new (buf) T(t)),
 		m_valid(true)
-	{
-		std::cout << "In ctor: " <<   std::endl; 
-	}
+	{ }
 
 
 	template<typename... Args>
