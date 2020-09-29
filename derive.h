@@ -1,9 +1,11 @@
 #include <iostream>
 #include <cassert>
 #include <memory>
+#include <optional>
 
 using std::ostream;
 using std::shared_ptr;
+using std::optional;
 
 namespace detail {
 enum Operand {
@@ -36,6 +38,8 @@ public:
 		return shared_ptr<Expression>{};
 	}
 protected:
+	friend class BinaryExpression;
+	virtual std::optional<char> opt_var() const { return optional<char>{}; }
 	Expression() = default;
 };
 
@@ -45,10 +49,10 @@ ostream& operator<<(ostream& os, const Expression& ex) {
 
 class CoefExpression : public Expression {
 public:
-	CoefExpression(double a_coef): coef(a_coef) 
+	CoefExpression(double coef): m_coef(coef) 
 	{ }
 	
-	virtual bool is_zero() { return coef == 0.; }
+	virtual bool is_zero() { return coef() == 0.; }
 	virtual shared_ptr<Expression> derivative() const {
 		return std::dynamic_pointer_cast<Expression>(
 			shared_ptr<CoefExpression>(new CoefExpression{0})
@@ -56,17 +60,21 @@ public:
 	}
 
 	virtual ostream& printTo(ostream& os) const {
-		os << coef;
+		os << coef();
 		return os;
 	}
-	double coef;
+	double coef() const { return m_coef;}
+	friend class BinaryExpression;
+protected:
+	virtual optional<char> opt_var() const { return optional<char>{}; }
+	double m_coef;
 };
 
 
 class XExpression : public Expression {
 public:
 	virtual ostream& printTo(ostream& os) const {
-		os << x;
+		os << x();
 		return os;
 	}
 
@@ -76,9 +84,12 @@ public:
 			shared_ptr<CoefExpression>(new CoefExpression{1})
 		);
 	}
-
-	XExpression(char a_x) { x = a_x;}
-	char x;
+	char x() const { return m_x; }
+	XExpression(char x) { m_x = x; }
+	friend class BinaryExpression;
+protected:
+	virtual optional<char> opt_var() const { return optional<char>{m_x}; }
+	char m_x;
 };
 
 class BinaryExpression;
@@ -116,11 +127,14 @@ public:
 	}
 
 	
+
 	BinaryExpression(shared_ptr<Expression> a_lhs, shared_ptr<Expression> a_rhs, Operand a_operand):
 		lhs(a_lhs),
 		rhs(a_rhs),
-		operand(a_operand) 
-	{ }
+		operand(a_operand)
+	{ 
+		opt_var();
+	}
 	
 	virtual shared_ptr<Expression> derivative() const {
 		switch (operand) {
@@ -142,7 +156,7 @@ public:
 						pow(
 							lhs, 
 							make_shared_expression(
-								new CoefExpression(coefExp->coef - 1)
+								new CoefExpression(coefExp->coef() - 1)
 							)
 						)
 					);
@@ -150,6 +164,21 @@ public:
 				}
 			default: assert(0); 
 		}
+	}
+
+protected:
+
+	virtual optional<char> opt_var() const { 
+		if (!lhs->opt_var()) {
+			return rhs->opt_var();
+		}
+
+		if (!rhs->opt_var()) {
+			return lhs->opt_var();
+		}
+	
+		assert(lhs->opt_var() == rhs->opt_var());
+		return lhs->opt_var();
 	}
 	shared_ptr<Expression> lhs;
 	shared_ptr<Expression> rhs;
@@ -173,7 +202,7 @@ shared_ptr<Expression> add(shared_ptr<Expression> lhs, shared_ptr<Expression> rh
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
 		return make_shared_expression(
-			new CoefExpression{coef_left->coef + coef_right->coef}
+			new CoefExpression{coef_left->coef() + coef_right->coef()}
 		); 
 	}
 
@@ -195,7 +224,7 @@ shared_ptr<Expression> subtract(shared_ptr<Expression> lhs, shared_ptr<Expressio
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
 		return make_shared_expression(
-			new CoefExpression{coef_left->coef - coef_right->coef}
+			new CoefExpression{coef_left->coef() - coef_right->coef()}
 		); 
 	}
 
@@ -213,7 +242,7 @@ shared_ptr<Expression> multiply(shared_ptr<Expression> lhs, shared_ptr<Expressio
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
 		return make_shared_expression(
-			new CoefExpression{coef_left->coef * coef_right->coef}
+			new CoefExpression{coef_left->coef() * coef_right->coef()}
 		); 
 	}
 	if (

@@ -4,7 +4,9 @@ using namespace std;
 int main() {
 	Func f('x');
 	Func x('x');
-	//Func g(5.);
+	Func y('y');
+	Func y_func = y * 3.;
+	//Func mixed = x * y; // Fails on assert
 	Func h = f * 5.;
 	Func const1(23.);
 	Func const2(2.);
