@@ -54,9 +54,7 @@ public:
 	
 	bool is_zero() const override { return coef() == 0.; }
 	shared_ptr<Expression> derivative() const override {
-		//return std::dynamic_pointer_cast<Expression>(
 		return shared_ptr<CoefExpression>(new CoefExpression{0});
-		//);
 	}
 	ostream& printTo(ostream& os) const override {
 		os << coef();
@@ -79,9 +77,7 @@ public:
 
 	bool is_zero() const override { return false; }
 	shared_ptr<Expression> derivative() const override {
-		//return std::dynamic_pointer_cast<Expression>(
 		return	shared_ptr<CoefExpression>(new CoefExpression{1});
-//		);
 	}
 	char x() const { return m_x; }
 	XExpression(char x) { m_x = x; }
@@ -185,15 +181,11 @@ protected:
 };
 
 shared_ptr<Expression> make_shared_expression(CoefExpression* ptr) {
-	//return std::dynamic_pointer_cast<Expression>(
-		return shared_ptr<CoefExpression>(ptr);
-	//);
+	return shared_ptr<CoefExpression>(ptr);
 }
 
 shared_ptr<Expression> make_shared_expression(BinaryExpression* ptr) {
-	//return std::dynamic_pointer_cast<Expression>(
-		return shared_ptr<BinaryExpression>(ptr);
-	//);
+	return shared_ptr<BinaryExpression>(ptr);
 }
 
 shared_ptr<Expression> add(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs) {
