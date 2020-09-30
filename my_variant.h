@@ -100,13 +100,6 @@ void destroy(my_variant<types...>& my) {
 	(static_cast<T*>(my.m_member))->~T();
 }
 
-
-template <class T, class... types>
-bool is_index_of(my_variant<types...>& my) {
-	size_t index = get_index<T, types...>::value;
-	return index == my.index();
-}
-
 template <class Obj, class... types> struct destroy_all{};
 template <class Obj, class T, class... types> struct destroy_all<Obj, T, types...>{
 	static void f(Obj& in_obj) {
@@ -118,23 +111,39 @@ template <class Obj> struct destroy_all<Obj> {
 	static void f(Obj& in_obj) { }
 };
 
+namespace detail {
+
+template <class T, class... types>
+bool is_index_of(my_variant<types...>& my) {
+	size_t index = get_index<T, types...>::value;
+	return index == my.index();
+}
 
 template <class Visitor, class Obj, class... types> struct visitor_struct { };
+
 template <class Visitor, class Obj, class Head, class... types> 
 struct visitor_struct<Visitor,Obj, Head, types...> {
 	static void visit(Visitor&& visitor, Obj&& obj) {
-	
-			if( !is_index_of<Head>(obj)) {
-				visitor_struct<Visitor, Obj, types...>::visit(std::move(visitor), std::move(obj));
-			} else {
-				visitor(get<Head>(obj));
-			}
+        if( !is_index_of<Head>(obj)) {
+            visitor_struct<Visitor, Obj, types...>::visit(std::move(visitor), std::move(obj));
+        } else {
+            visitor(get<Head>(obj));
+        }
 	}
 };
+
 template <class Visitor, class Obj> 
 struct visitor_struct<Visitor, Obj> {
 	static void visit(Visitor&& visitor, Obj&& obj) { }
 };
+
+}  // end of namespace detail
+
+template<class Visitor, class... types> 
+void visit(Visitor&& visitor, my_variant<types...>&& var_obj) {
+	detail::visitor_struct<Visitor, my_variant<types...>, types...>::visit(std::move(visitor), std::move(var_obj));
+};
+
 
 
 

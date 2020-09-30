@@ -42,7 +42,7 @@ int main() {
 		void operator()(OtherClass& other) {cout << "I don't care about OtherClass " << endl; }
 	};
 	
-	visitor_struct<MyVisitor,my_variant_t, int, double, MyClass, OtherClass> ::visit(MyVisitor{}, move(my2));
-	visitor_struct<MyVisitor,my_variant_t, int, double, MyClass, OtherClass> ::visit(MyVisitor{}, move(other));
+	visit(MyVisitor{}, move(my2));
+	visit(MyVisitor{}, move(other));
 	return 0;
 }
