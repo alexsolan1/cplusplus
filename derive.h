@@ -8,7 +8,7 @@ using std::shared_ptr;
 using std::optional;
 
 namespace detail {
-enum Operand {
+enum Operation {
 	plus, 
 	minus,
 	mult,
@@ -16,8 +16,8 @@ enum Operand {
 };
 
 
-ostream& operator<<(ostream& os, const Operand& operand) {
-	switch (operand) {
+ostream& operator<<(ostream& os, const Operation& operation) {
+	switch (operation) {
 		case plus: os << "+"; break;
 		case minus: os << "-"; break;
 		case mult: os << "*"; break;
@@ -29,7 +29,7 @@ ostream& operator<<(ostream& os, const Operand& operand) {
 
 class Expression {
 public:
-	virtual bool is_zero() { return true; }
+	virtual bool is_zero() const { return true; }
 	virtual ostream& printTo(ostream& os) const {
 		os << "";
 		return os;
@@ -39,7 +39,7 @@ public:
 	}
 protected:
 	friend class BinaryExpression;
-	virtual std::optional<char> opt_var() const { return optional<char>{}; }
+	virtual std::optional<char> opt_var() const { return std::nullopt; }
 	Expression() = default;
 };
 
@@ -52,67 +52,66 @@ public:
 	CoefExpression(double coef): m_coef(coef) 
 	{ }
 	
-	virtual bool is_zero() { return coef() == 0.; }
-	virtual shared_ptr<Expression> derivative() const {
-		return std::dynamic_pointer_cast<Expression>(
-			shared_ptr<CoefExpression>(new CoefExpression{0})
-		);
+	bool is_zero() const override { return coef() == 0.; }
+	shared_ptr<Expression> derivative() const override {
+		//return std::dynamic_pointer_cast<Expression>(
+		return shared_ptr<CoefExpression>(new CoefExpression{0});
+		//);
 	}
-
-	virtual ostream& printTo(ostream& os) const {
+	ostream& printTo(ostream& os) const override {
 		os << coef();
 		return os;
 	}
 	double coef() const { return m_coef;}
 	friend class BinaryExpression;
 protected:
-	virtual optional<char> opt_var() const { return optional<char>{}; }
+	optional<char> opt_var() const override { return std::nullopt; }
 	double m_coef;
 };
 
 
 class XExpression : public Expression {
 public:
-	virtual ostream& printTo(ostream& os) const {
+	ostream& printTo(ostream& os) const override {
 		os << x();
 		return os;
 	}
 
-	virtual bool is_zero() { return false; }
-	virtual shared_ptr<Expression> derivative() const {
-		return std::dynamic_pointer_cast<Expression>(
-			shared_ptr<CoefExpression>(new CoefExpression{1})
-		);
+	bool is_zero() const override { return false; }
+	shared_ptr<Expression> derivative() const override {
+		//return std::dynamic_pointer_cast<Expression>(
+		return	shared_ptr<CoefExpression>(new CoefExpression{1});
+//		);
 	}
 	char x() const { return m_x; }
 	XExpression(char x) { m_x = x; }
 	friend class BinaryExpression;
 protected:
-	virtual optional<char> opt_var() const { return optional<char>{m_x}; }
+	optional<char> opt_var() const override { return optional<char>{m_x}; }
 	char m_x;
 };
 
 class BinaryExpression;
 shared_ptr<Expression> make_shared_expression(BinaryExpression* ptr);
 shared_ptr<Expression> make_shared_expression(CoefExpression* ptr);
-shared_ptr<Expression> multiply(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs);
-shared_ptr<Expression> add(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs);
-shared_ptr<Expression> pow(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs);
-shared_ptr<Expression> subtract(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs);
+shared_ptr<Expression> multiply(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs);
+shared_ptr<Expression> add(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs);
+shared_ptr<Expression> pow(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs);
+shared_ptr<Expression> subtract(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs);
 
 class BinaryExpression : public Expression {
 public:
-	virtual ostream& printTo(ostream& os) const {
+	ostream& printTo(ostream& os) const override {
 		os << "(";
 		lhs->printTo(os);
-	 	os << operand;
+	 	os << operation;
 		rhs->printTo(os);
 		os << ")";
 		return os;
 	}
 
-	virtual bool is_zero() {
-		switch (operand) {
+	bool is_zero() const override {
+		switch (operation) {
 			case plus: 
 				return lhs->is_zero() && rhs->is_zero();
 			case minus: 
@@ -128,16 +127,16 @@ public:
 
 	
 
-	BinaryExpression(shared_ptr<Expression> a_lhs, shared_ptr<Expression> a_rhs, Operand a_operand):
+	BinaryExpression(shared_ptr<Expression> a_lhs, shared_ptr<Expression> a_rhs, Operation a_operation):
 		lhs(a_lhs),
 		rhs(a_rhs),
-		operand(a_operand)
+		operation(a_operation)
 	{ 
 		opt_var();
 	}
 	
-	virtual shared_ptr<Expression> derivative() const {
-		switch (operand) {
+	shared_ptr<Expression> derivative() const override {
+		switch (operation) {
 			case plus: 
 				return add(lhs->derivative(), rhs->derivative());
 			case minus: 
@@ -168,7 +167,7 @@ public:
 
 protected:
 
-	virtual optional<char> opt_var() const { 
+	virtual optional<char> opt_var() const override { 
 		if (!lhs->opt_var()) {
 			return rhs->opt_var();
 		}
@@ -182,22 +181,22 @@ protected:
 	}
 	shared_ptr<Expression> lhs;
 	shared_ptr<Expression> rhs;
-	Operand operand;
+	Operation operation;
 };
 
 shared_ptr<Expression> make_shared_expression(CoefExpression* ptr) {
-	return std::dynamic_pointer_cast<Expression>(
-		shared_ptr<CoefExpression>(ptr)
-	);
+	//return std::dynamic_pointer_cast<Expression>(
+		return shared_ptr<CoefExpression>(ptr);
+	//);
 }
 
 shared_ptr<Expression> make_shared_expression(BinaryExpression* ptr) {
-	return std::dynamic_pointer_cast<Expression>(
-		shared_ptr<BinaryExpression>(ptr)
-	);
+	//return std::dynamic_pointer_cast<Expression>(
+		return shared_ptr<BinaryExpression>(ptr);
+	//);
 }
 
-shared_ptr<Expression> add(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs) {
+shared_ptr<Expression> add(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs) {
 	auto coef_left = std::dynamic_pointer_cast<CoefExpression>(lhs);
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
@@ -219,7 +218,7 @@ shared_ptr<Expression> add(shared_ptr<Expression> lhs, shared_ptr<Expression> rh
 	);
 }
 
-shared_ptr<Expression> subtract(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs) {
+shared_ptr<Expression> subtract(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs) {
 	auto coef_left = std::dynamic_pointer_cast<CoefExpression>(lhs);
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
@@ -237,7 +236,7 @@ shared_ptr<Expression> subtract(shared_ptr<Expression> lhs, shared_ptr<Expressio
 	);
 }
 
-shared_ptr<Expression> multiply(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs) {
+shared_ptr<Expression> multiply(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs) {
 	auto coef_left = std::dynamic_pointer_cast<CoefExpression>(lhs);
 	auto coef_right = std::dynamic_pointer_cast<CoefExpression>(rhs);
 	if (coef_left && coef_right) {
@@ -258,7 +257,7 @@ shared_ptr<Expression> multiply(shared_ptr<Expression> lhs, shared_ptr<Expressio
 	);
 }
 
-shared_ptr<Expression> pow(shared_ptr<Expression> lhs, shared_ptr<Expression> rhs) {
+shared_ptr<Expression> pow(const shared_ptr<Expression>& lhs, const shared_ptr<Expression>& rhs) {
 	return make_shared_expression(
 		new BinaryExpression{lhs, rhs, power}
 	);

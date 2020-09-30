@@ -22,5 +22,9 @@ int main() {
 	cout << "f_mult_g is: " << f_mult_g << " derivative is: " << f_mult_g.derivative() << endl;
 	Func sub_func = f * 3. - x;
 	cout << "sub_func(x) = " << sub_func << " sub_func'(x) = " << sub_func.derivative() << endl;
+	Func zero_func = 0. * mult_consts * h;
+	cout << "zero_func(x) = " << zero_func << " zero_func'(x) = " << zero_func.derivative() << endl;
+	Func small_coeff = 0.000001 * mult_consts * h;
+	cout << "small_coeff(x) = " << small_coeff << " small_coeff'(x) = " << small_coeff.derivative() << endl;
 	return 0;
 }
