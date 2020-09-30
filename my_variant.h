@@ -53,32 +53,32 @@ struct get_index<T> {
 };
 
 template <class Obj, class... types> struct destroy_all;
-template <class T, class... types>
+template <class Head, class... types>
 struct my_variant {
-	my_variant() : m_member(new (&m_aligned_storage) T{}) { }
+	my_variant() : m_member(new (&m_aligned_storage) Head{}) { }
 
-	my_variant(my_variant<T, types...>&) {
-		assert(sizeof(T) == 0 && "Not implemented");
+	my_variant(my_variant<Head, types...>&) {
+		assert(sizeof(Head) == 0 && "Not implemented");
 	}
-	my_variant(my_variant<T, types...>&&) {
-		assert(sizeof(T) == 0 && "Not implemented");
+	my_variant(my_variant<Head, types...>&&) {
+		assert(sizeof(Head) == 0 && "Not implemented");
 	}
 	// need to add emplacement ctors...
 
 	template <class U>
 	my_variant(U&& u) :
-		m_index(get_index<U, T, types...>::value),	
- 		m_member(new (&m_aligned_storage) U{u} )
+		m_index(get_index<U, Head, types...>::value),	
+ 		m_member(new (&m_aligned_storage) U{std::move(u)} )
 	{ }
 	~my_variant() {
-		destroy_all<decltype(*this), T, types...>::f(*this);	
+		destroy_all<decltype(*this), Head, types...>::f(*this);	
 	}			
 	size_t index() const { return m_index; }
 
 
-//	template <class U> friend U& get<U>(my_variant<T, types...>& my); //compilation issues should be solved
+//	template <class U> friend U& get<U>(my_variant<Head, types...>& my); //compilation issues should be solved
 //private:
-	std::aligned_storage_t<max_size_helper<types...>::value, max_align_helper<types...>::value> m_aligned_storage;
+	std::aligned_storage_t<max_size_helper<Head, types...>::value, max_align_helper<Head, types...>::value> m_aligned_storage;
 	void* m_member;
 	size_t m_index;
 };
@@ -100,6 +100,13 @@ void destroy(my_variant<types...>& my) {
 	(static_cast<T*>(my.m_member))->~T();
 }
 
+
+template <class T, class... types>
+bool is_index_of(my_variant<types...>& my) {
+	size_t index = get_index<T, types...>::value;
+	return index == my.index();
+}
+
 template <class Obj, class... types> struct destroy_all{};
 template <class Obj, class T, class... types> struct destroy_all<Obj, T, types...>{
 	static void f(Obj& in_obj) {
@@ -112,7 +119,22 @@ template <class Obj> struct destroy_all<Obj> {
 };
 
 
-
+template <class Visitor, class Obj, class... types> struct visitor_struct { };
+template <class Visitor, class Obj, class Head, class... types> 
+struct visitor_struct<Visitor,Obj, Head, types...> {
+	static void visit(Visitor&& visitor, Obj&& obj) {
+	
+			if( !is_index_of<Head>(obj)) {
+				visitor_struct<Visitor, Obj, types...>::visit(std::move(visitor), std::move(obj));
+			} else {
+				visitor(get<Head>(obj));
+			}
+	}
+};
+template <class Visitor, class Obj> 
+struct visitor_struct<Visitor, Obj> {
+	static void visit(Visitor&& visitor, Obj&& obj) { }
+};
 
 
 
