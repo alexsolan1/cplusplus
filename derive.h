@@ -37,6 +37,7 @@ public:
 	virtual shared_ptr<Expression> derivative() const {
 		return shared_ptr<Expression>{};
 	}
+    ~Expression() { }
 protected:
 	friend class BinaryExpression;
 	virtual std::optional<char> opt_var() const { return std::nullopt; }
@@ -52,6 +53,7 @@ public:
 	CoefExpression(double coef): m_coef(coef) 
 	{ }
 	
+    ~CoefExpression() { }
 	bool is_zero() const override { return coef() == 0.; }
 	shared_ptr<Expression> derivative() const override {
 		return shared_ptr<CoefExpression>(new CoefExpression{0});
@@ -75,6 +77,7 @@ public:
 		return os;
 	}
 
+    ~XExpression() { }
 	bool is_zero() const override { return false; }
 	shared_ptr<Expression> derivative() const override {
 		return	shared_ptr<CoefExpression>(new CoefExpression{1});
@@ -106,6 +109,7 @@ public:
 		return os;
 	}
 
+    ~BinaryExpression() { }
 	bool is_zero() const override {
 		switch (operation) {
 			case plus: 
@@ -272,10 +276,10 @@ public:
 	{ }	
 
 	Func(Func&& func) : 
-		m_expr(func.m_expr) {
-		func.m_expr = nullptr;
+		m_expr(std::move(func.m_expr)) {
 	}
-	Func derivative() {
+	
+    Func derivative() {
 		return Func(m_expr->derivative());
 	}
 private:
